@@ -1,0 +1,190 @@
+/****** no .of employess work on each department   ******/
+SELECT 
+    d.Name as DepartmentName,
+    COUNT(e.BusinessEntityID) as NumberOfEmployees
+FROM 
+    HumanResources.Department d,
+    HumanResources.EmployeeDepartmentHistory edh,
+    HumanResources.Employee e
+WHERE 
+    d.DepartmentID = edh.DepartmentID
+    AND edh.BusinessEntityID = e.BusinessEntityID
+GROUP BY 
+    d.Name
+ORDER BY 
+    NumberOfEmployees DESC;
+
+/***** no.of employes work on different age group  *****/
+SELECT
+    CASE 
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 20 AND 30 THEN '20-30'
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 31 AND 40 THEN '31-40'
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 41 AND 50 THEN '41-50'
+        ELSE '51+'
+    END as AgeGroup,
+    COUNT(*) as NumberOfEmployees
+FROM 
+    HumanResources.Employee
+GROUP BY 
+    CASE 
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 20 AND 30 THEN '20-30'
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 31 AND 40 THEN '31-40'
+        WHEN DATEDIFF(YEAR, BirthDate, GETDATE()) BETWEEN 41 AND 50 THEN '41-50'
+        ELSE '51+'
+    END
+ORDER BY 
+    NumberOfEmployees DESC;
+
+	/***** no.of employesbased on gender  *****/
+SELECT 
+    CASE 
+        WHEN Gender = 'F'  THEN 'Female'
+        WHEN Gender = 'M'  THEN 'Male'
+      
+    END as Gender,
+    COUNT(*) as NumberOfEmployees
+FROM 
+    HumanResources.Employee
+GROUP BY 
+    Gender;
+/***** no.of employesbased on marital status  *****/
+SELECT 
+    CASE 
+        WHEN MaritalStatus = 'M'  THEN 'Married'
+        WHEN MaritalStatus = 'S'  THEN 'Single'
+      
+    END as MaritalStatus,
+    COUNT(*) as NumberOfEmployees
+FROM 
+    HumanResources.Employee
+GROUP BY 
+    MaritalStatus;
+/****employees work on diffrent shift*****/
+SELECT
+    s.Name as ShiftName,
+    COUNT(edh.BusinessEntityID) as NumberOfEmployees
+FROM
+    HumanResources.Shift s
+JOIN
+    HumanResources.EmployeeDepartmentHistory edh ON s.ShiftID = edh.ShiftID
+GROUP BY
+    s.Name;
+
+/*** night shift employee distribution ***/
+	SELECT 
+    d.Name as DepartmentName,
+    COUNT(edh.BusinessEntityID) as NumberOfEmployeesOnNightShift,
+    SUM(CASE WHEN e.Gender = 'M' THEN 1 ELSE 0 END) as MaleOnNightShift,
+    SUM(CASE WHEN e.Gender = 'F' THEN 1 ELSE 0 END) as FemaleOnNightShift
+FROM 
+    HumanResources.Department d
+JOIN 
+    HumanResources.EmployeeDepartmentHistory edh ON d.DepartmentID = edh.DepartmentID
+JOIN
+    HumanResources.Employee e ON edh.BusinessEntityID = e.BusinessEntityID
+WHERE
+    edh.ShiftID = 3
+GROUP BY 
+    d.Name
+ORDER BY 
+    NumberOfEmployeesOnNightShift DESC;
+/*** emp who takes more sick leave ***/
+SELECT TOP 10
+    e.BusinessEntityID,
+    e.LoginID,
+    e.SickLeaveHours
+FROM 
+    HumanResources.Employee e
+ORDER BY 
+    e.SickLeaveHours DESC;
+	
+/*** emp who takes least sick leave ***/
+SELECT TOP 10
+    e.BusinessEntityID,
+    e.LoginID,
+    e.SickLeaveHours
+FROM 
+    HumanResources.Employee e
+ORDER BY 
+    e.SickLeaveHours asc;
+
+/*** emp who takes more vaccation hours ***/
+SELECT TOP 10
+    e.BusinessEntityID,
+    e.LoginID,
+    e.VacationHours
+FROM 
+    HumanResources.Employee e
+ORDER BY 
+    e.VacationHours DESC;
+
+/*** emp who takes more vaccation hours ***/
+SELECT TOP 10
+    e.BusinessEntityID,
+    e.LoginID,
+    e.VacationHours
+FROM 
+    HumanResources.Employee e
+ORDER BY 
+    e.VacationHours asc;
+
+/***job title hierarcy**/
+SELECT DISTINCT JobTitle
+FROM HumanResources.Employee
+ORDER BY JobTitle;
+/**avg vacation and sick leave** dep wise*/
+SELECT
+    d.Name as DepartmentName,
+    AVG(e.VacationHours) as AvgVacationHours,
+    AVG(e.SickLeaveHours) as AvgSickLeaveHours
+FROM 
+    HumanResources.Department d
+JOIN 
+    HumanResources.EmployeeDepartmentHistory edh ON d.DepartmentID = edh.DepartmentID
+JOIN
+    HumanResources.Employee e ON edh.BusinessEntityID = e.BusinessEntityID
+GROUP BY 
+    d.Name
+ORDER BY 
+    AvgVacationHours DESC;
+
+/***longest serving employee by department**/
+WITH RankedEmployees AS (
+    SELECT 
+        d.Name as DepartmentName,
+        e.LoginID as LongestServingEmployee,
+        DATEDIFF(YEAR, e.HireDate, GETDATE()) as YearsWithCompany,
+        ROW_NUMBER() OVER (PARTITION BY d.Name ORDER BY DATEDIFF(YEAR, e.HireDate, GETDATE()) DESC) as Rank
+    FROM 
+        HumanResources.Department d
+    JOIN 
+        HumanResources.EmployeeDepartmentHistory edh ON d.DepartmentID = edh.DepartmentID
+    JOIN
+        HumanResources.Employee e ON edh.BusinessEntityID = e.BusinessEntityID
+    WHERE
+        e.CurrentFlag = 1
+)
+
+SELECT 
+    DepartmentName,
+    LongestServingEmployee,
+    YearsWithCompany
+FROM 
+    RankedEmployees
+WHERE 
+    Rank = 1;
+/*pay frequency analysis*/
+
+/***Pay Frequency 1: This could represent a monthly pay schedule, where employees receive their paychecks once a month.
+
+Pay Frequency 2: This might represent a bi-weekly pay schedule, where employees receive their paychecks every two weeks.*/
+SELECT 
+    ep.PayFrequency,
+    COUNT(*) as NumberOfEmployees
+FROM 
+    HumanResources.EmployeePayHistory ep
+GROUP BY 
+    ep.PayFrequency;
+
+
+
